@@ -332,65 +332,67 @@ class Message extends StatelessWidget {
               left: 20 + (isMobile ? query.padding.left : 0),
               right: isMobile ? query.padding.right : 0,
             ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        textDirection: bubbleRtlAlignment == BubbleRtlAlignment.left
-            ? null
-            : TextDirection.ltr,
-        children: [
-          if (!currentUserIsAuthor && showUserAvatars) _avatarBuilder(),
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: messageWidth.toDouble(),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                GestureDetector(
-                  onDoubleTap: () => onMessageDoubleTap?.call(context, message),
-                  onLongPress: () => onMessageLongPress?.call(context, message),
-                  onTap: () => onMessageTap?.call(context, message),
-                  child: onMessageVisibilityChanged != null
-                      ? VisibilityDetector(
-                          key: Key(message.id),
-                          onVisibilityChanged: (visibilityInfo) =>
-                              onMessageVisibilityChanged!(
-                            message,
-                            visibilityInfo.visibleFraction > 0.1,
-                          ),
-                          child: _bubbleBuilder(
-                            context,
-                            borderRadius.resolve(Directionality.of(context)),
-                            currentUserIsAuthor,
-                            enlargeEmojis,
-                          ),
-                        )
-                      : _bubbleBuilder(
-                          context,
-                          borderRadius.resolve(Directionality.of(context)),
-                          currentUserIsAuthor,
-                          enlargeEmojis,
-                        ),
+      child: Builder(
+        builder: (c) => Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            textDirection: bubbleRtlAlignment == BubbleRtlAlignment.left
+                ? null
+                : TextDirection.ltr,
+            children: [
+              if (!currentUserIsAuthor && showUserAvatars) _avatarBuilder(),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: messageWidth.toDouble(),
                 ),
-              ],
-            ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    GestureDetector(
+                      onDoubleTap: () => onMessageDoubleTap?.call(c, message),
+                      onLongPress: () => onMessageLongPress?.call(c, message),
+                      onTap: () => onMessageTap?.call(context, message),
+                      child: onMessageVisibilityChanged != null
+                          ? VisibilityDetector(
+                              key: Key(message.id),
+                              onVisibilityChanged: (visibilityInfo) =>
+                                  onMessageVisibilityChanged!(
+                                message,
+                                visibilityInfo.visibleFraction > 0.1,
+                              ),
+                              child: _bubbleBuilder(
+                                context,
+                                borderRadius.resolve(Directionality.of(context)),
+                                currentUserIsAuthor,
+                                enlargeEmojis,
+                              ),
+                            )
+                          : _bubbleBuilder(
+                              context,
+                              borderRadius.resolve(Directionality.of(context)),
+                              currentUserIsAuthor,
+                              enlargeEmojis,
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              if (currentUserIsAuthor)
+                Padding(
+                  padding: InheritedChatTheme.of(context).theme.statusIconPadding,
+                  child: showStatus
+                      ? GestureDetector(
+                          onLongPress: () =>
+                              onMessageStatusLongPress?.call(context, message),
+                          onTap: () => onMessageStatusTap?.call(context, message),
+                          child: customStatusBuilder != null
+                              ? customStatusBuilder!(message, context: context)
+                              : MessageStatus(status: message.status),
+                        )
+                      : null,
+                ),
+            ],
           ),
-          if (currentUserIsAuthor)
-            Padding(
-              padding: InheritedChatTheme.of(context).theme.statusIconPadding,
-              child: showStatus
-                  ? GestureDetector(
-                      onLongPress: () =>
-                          onMessageStatusLongPress?.call(context, message),
-                      onTap: () => onMessageStatusTap?.call(context, message),
-                      child: customStatusBuilder != null
-                          ? customStatusBuilder!(message, context: context)
-                          : MessageStatus(status: message.status),
-                    )
-                  : null,
-            ),
-        ],
       ),
     );
   }

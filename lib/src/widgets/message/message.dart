@@ -351,6 +351,7 @@ class Message extends StatelessWidget {
                     GestureDetector(
                       onDoubleTap: () => onMessageDoubleTap?.call(c, message),
                       onLongPress: () => onMessageLongPress?.call(c, message),
+                      onSecondaryTap: () => onMessageLongPress?.call(c, message),
                       onTap: () => onMessageTap?.call(context, message),
                       child: onMessageVisibilityChanged != null
                           ? VisibilityDetector(

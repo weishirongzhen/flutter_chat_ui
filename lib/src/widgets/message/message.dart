@@ -221,7 +221,7 @@ class Message extends StatelessWidget {
                   ),
                 );
 
-  Widget _messageBuilder() {
+  Widget   _messageBuilder() {
     switch (message.type) {
       case types.MessageType.audio:
         final audioMessage = message as types.AudioMessage;

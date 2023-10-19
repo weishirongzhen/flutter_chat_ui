@@ -44,7 +44,7 @@ class Input extends StatefulWidget {
 }
 
 /// [Input] widget state.
-class _InputState extends State<Input> {
+class _InputState extends State<Input> with WidgetsBindingObserver, RouteAware {
   late final _inputFocusNode = FocusNode(
     onKeyEvent: (node, event) {
       if (event.physicalKey == PhysicalKeyboardKey.enter &&
@@ -67,26 +67,59 @@ class _InputState extends State<Input> {
   bool _sendButtonVisible = false;
   late TextEditingController _textController;
 
+  OverlayEntry? atSomeoneOverlay;
+  double overlayDy = 0;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _textController = widget.options.textEditingController ?? InputTextFieldController();
+    _textController.addListener(() {
+      _onCursorChange(_textController.selection.baseOffset);
+      widget.options.onCursorChanged?.call(_textController.selection.baseOffset);
+    });
 
-    _textController =
-        widget.options.textEditingController ?? InputTextFieldController();
+    widget.options.onControllerSet?.call(_textController);
     _handleSendButtonVisibilityModeChange();
+    if (widget.options.enabledAtSomeone) {
+      atSomeoneOverlay = OverlayEntry(
+        builder: (context) => Positioned(
+          left: 0,
+          right: 0,
+          bottom: overlayDy,
+          child: widget.options.atSomeoneView!,
+        ),
+      );
+      widget.options.onAtSomeoneViewCreated?.call(atSomeoneOverlay);
+    }
   }
 
   void _handleSendButtonVisibilityModeChange() {
     _textController.removeListener(_handleTextControllerChange);
-    if (widget.options.sendButtonVisibilityMode ==
-        SendButtonVisibilityMode.hidden) {
+    if (widget.options.sendButtonVisibilityMode == SendButtonVisibilityMode.hidden) {
       _sendButtonVisible = false;
-    } else if (widget.options.sendButtonVisibilityMode ==
-        SendButtonVisibilityMode.editing) {
+    } else if (widget.options.sendButtonVisibilityMode == SendButtonVisibilityMode.editing) {
       _sendButtonVisible = _textController.text.trim() != '';
       _textController.addListener(_handleTextControllerChange);
     } else {
       _sendButtonVisible = true;
+    }
+  }
+
+  void _onCursorChange(int offset) {
+    if (widget.options.enabledAtSomeone) {
+      final renderBox = context.findRenderObject() as RenderBox;
+      overlayDy = View.of(context).viewInsets.bottom / View.of(context).devicePixelRatio + renderBox.size.height;
+      try {
+        if (_textController.text[offset - 1] == '@') {
+          Overlay.of(context).insert(atSomeoneOverlay!);
+        } else {
+          // atSomeoneOverlay?.remove();
+        }
+      } catch (_) {
+        // atSomeoneOverlay?.remove();
+      }
     }
   }
 
@@ -110,10 +143,7 @@ class _InputState extends State<Input> {
 
   Widget _inputBuilder() {
     final query = MediaQuery.of(context);
-    final buttonPadding = InheritedChatTheme.of(context)
-        .theme
-        .inputPadding
-        .copyWith(left: 16, right: 16);
+    final buttonPadding = InheritedChatTheme.of(context).theme.inputPadding.copyWith(left: 16, right: 16);
     final safeAreaInsets = isMobile
         ? EdgeInsets.fromLTRB(
             query.padding.left,
@@ -122,11 +152,7 @@ class _InputState extends State<Input> {
             query.viewInsets.bottom + query.padding.bottom,
           )
         : EdgeInsets.zero;
-    final textPadding = InheritedChatTheme.of(context)
-        .theme
-        .inputPadding
-        .copyWith(left: 0, right: 0)
-        .add(
+    final textPadding = InheritedChatTheme.of(context).theme.inputPadding.copyWith(left: 0, right: 0).add(
           EdgeInsets.fromLTRB(
             widget.onAttachmentPressed != null ? 0 : 24,
             0,
@@ -143,8 +169,7 @@ class _InputState extends State<Input> {
           borderRadius: InheritedChatTheme.of(context).theme.inputBorderRadius,
           color: InheritedChatTheme.of(context).theme.inputBackgroundColor,
           child: Container(
-            decoration:
-                InheritedChatTheme.of(context).theme.inputContainerDecoration,
+            decoration: InheritedChatTheme.of(context).theme.inputContainerDecoration,
             padding: safeAreaInsets,
             child: Row(
               textDirection: TextDirection.ltr,
@@ -164,24 +189,12 @@ class _InputState extends State<Input> {
                       autofocus: widget.options.autofocus,
                       enableSuggestions: widget.options.enableSuggestions,
                       controller: _textController,
-                      cursorColor: InheritedChatTheme.of(context)
-                          .theme
-                          .inputTextCursorColor,
-                      decoration: InheritedChatTheme.of(context)
-                          .theme
-                          .inputTextDecoration
-                          .copyWith(
-                            hintStyle: InheritedChatTheme.of(context)
-                                .theme
-                                .inputTextStyle
-                                .copyWith(
-                                  color: InheritedChatTheme.of(context)
-                                      .theme
-                                      .inputTextColor
-                                      .withOpacity(0.5),
+                      cursorColor: InheritedChatTheme.of(context).theme.inputTextCursorColor,
+                      decoration: InheritedChatTheme.of(context).theme.inputTextDecoration.copyWith(
+                            hintStyle: InheritedChatTheme.of(context).theme.inputTextStyle.copyWith(
+                                  color: InheritedChatTheme.of(context).theme.inputTextColor.withOpacity(0.5),
                                 ),
-                            hintText:
-                                InheritedL10n.of(context).l10n.inputPlaceholder,
+                            hintText: InheritedL10n.of(context).l10n.inputPlaceholder,
                           ),
                       focusNode: _inputFocusNode,
                       keyboardType: widget.options.keyboardType,
@@ -189,13 +202,8 @@ class _InputState extends State<Input> {
                       minLines: 1,
                       onChanged: widget.options.onTextChanged,
                       onTap: widget.options.onTextFieldTap,
-                      style: InheritedChatTheme.of(context)
-                          .theme
-                          .inputTextStyle
-                          .copyWith(
-                            color: InheritedChatTheme.of(context)
-                                .theme
-                                .inputTextColor,
+                      style: InheritedChatTheme.of(context).theme.inputTextStyle.copyWith(
+                            color: InheritedChatTheme.of(context).theme.inputTextColor,
                           ),
                       textCapitalization: TextCapitalization.sentences,
                     ),
@@ -224,8 +232,7 @@ class _InputState extends State<Input> {
   @override
   void didUpdateWidget(covariant Input oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.options.sendButtonVisibilityMode !=
-        oldWidget.options.sendButtonVisibilityMode) {
+    if (widget.options.sendButtonVisibilityMode != oldWidget.options.sendButtonVisibilityMode) {
       _handleSendButtonVisibilityModeChange();
     }
   }
@@ -234,7 +241,37 @@ class _InputState extends State<Input> {
   void dispose() {
     _inputFocusNode.dispose();
     _textController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    widget.options.routeObserver?.unsubscribe(this);
     super.dispose();
+  }
+
+  @override
+  void didPop() {
+    atSomeoneOverlay?.remove();
+  }
+
+  @override
+  void didPushNext() {
+    FocusScope.of(context).unfocus();
+    atSomeoneOverlay?.remove();
+  }
+
+  @override
+  void didChangeDependencies() {
+    widget.options.routeObserver?.subscribe(this, ModalRoute.of(context) as PageRoute);
+
+    super.didChangeDependencies();
+  }
+
+  @override
+  void didChangeMetrics() {
+    if (atSomeoneOverlay != null && widget.options.enabledAtSomeone) {
+      final renderBox = context.findRenderObject() as RenderBox;
+      overlayDy = View.of(context).viewInsets.bottom / View.of(context).devicePixelRatio + renderBox.size.height;
+      atSomeoneOverlay!.markNeedsBuild();
+    }
+    super.didChangeMetrics();
   }
 
   @override
@@ -257,6 +294,12 @@ class InputOptions {
     this.autofocus = false,
     this.enableSuggestions = true,
     this.enabled = true,
+    this.enabledAtSomeone = true,
+    this.routeObserver,
+    this.atSomeoneView,
+    this.onAtSomeoneViewCreated,
+    this.onControllerSet,
+    this.onCursorChanged,
   });
 
   /// Controls the [Input] clear behavior. Defaults to [InputClearMode.always].
@@ -267,6 +310,8 @@ class InputOptions {
 
   /// Will be called whenever the text inside [TextField] changes.
   final void Function(String)? onTextChanged;
+
+  final void Function(int)? onCursorChanged;
 
   /// Will be called on [TextField] tap.
   final VoidCallback? onTextFieldTap;
@@ -295,4 +340,14 @@ class InputOptions {
 
   /// Controls the [TextInput] enabled behavior. Defaults to [true].
   final bool enabled;
+
+  final bool enabledAtSomeone;
+
+  final RouteObserver? routeObserver;
+
+  final Widget? atSomeoneView;
+
+  final Function(OverlayEntry? overlayEntry)? onAtSomeoneViewCreated;
+
+  final Function(TextEditingController textEditingController)? onControllerSet;
 }

@@ -1,3 +1,4 @@
+import 'package:extended_text_field/extended_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
@@ -10,6 +11,7 @@ import '../state/inherited_l10n.dart';
 import 'attachment_button.dart';
 import 'input_text_field_controller.dart';
 import 'send_button.dart';
+import 'special_text/at_special_text_span_builder.dart';
 
 /// A class that represents bottom bar widget with a text field, attachment and
 /// send buttons inside. By default hides send button when text field is empty.
@@ -112,19 +114,28 @@ class _InputState extends State<Input> with WidgetsBindingObserver, RouteAware {
       final renderBox = context.findRenderObject() as RenderBox;
       overlayDy = View.of(context).viewInsets.bottom / View.of(context).devicePixelRatio + renderBox.size.height;
       try {
+        if (_textController.text.isEmpty) {
+          removeOverlay();
+          return;
+        }
+
         if (_textController.text[offset - 1] == '@') {
           Overlay.of(context).insert(atSomeoneOverlay!);
         } else {
-          // atSomeoneOverlay?.remove();
+          removeOverlay();
         }
-      } catch (_) {
-        // atSomeoneOverlay?.remove();
-      }
+      } catch (_) {}
+    }
+  }
+
+  void removeOverlay() {
+    if (atSomeoneOverlay != null && atSomeoneOverlay?.mounted == true) {
+      atSomeoneOverlay?.remove();
     }
   }
 
   void _handleSendPressed() {
-    final trimmedText = _textController.text.trim();
+    final trimmedText = _textController.text;
     if (trimmedText != '') {
       final partialText = types.PartialText(text: trimmedText);
       widget.onSendPressed(partialText);
@@ -183,8 +194,15 @@ class _InputState extends State<Input> with WidgetsBindingObserver, RouteAware {
                 Expanded(
                   child: Padding(
                     padding: textPadding,
-                    child: TextField(
+                    child: ExtendedTextField(
                       enabled: widget.options.enabled,
+                      specialTextSpanBuilder: AtSpecialTextSpanBuilder(
+                        atCallback: (showText, actualText) {},
+                        atStyle: InheritedChatTheme.of(context).theme.inputTextStyle.copyWith(
+                              color: Colors.blue,
+                            ),
+                        allAtMap: widget.options.atMembersMap,
+                      ),
                       autocorrect: widget.options.autocorrect,
                       autofocus: widget.options.autofocus,
                       enableSuggestions: widget.options.enableSuggestions,
@@ -248,13 +266,13 @@ class _InputState extends State<Input> with WidgetsBindingObserver, RouteAware {
 
   @override
   void didPop() {
-    atSomeoneOverlay?.remove();
+    removeOverlay();
   }
 
   @override
   void didPushNext() {
     FocusScope.of(context).unfocus();
-    atSomeoneOverlay?.remove();
+    removeOverlay();
   }
 
   @override
@@ -300,6 +318,7 @@ class InputOptions {
     this.onAtSomeoneViewCreated,
     this.onControllerSet,
     this.onCursorChanged,
+    this.atMembersMap = const {},
   });
 
   /// Controls the [Input] clear behavior. Defaults to [InputClearMode.always].
@@ -350,4 +369,6 @@ class InputOptions {
   final Function(OverlayEntry? overlayEntry)? onAtSomeoneViewCreated;
 
   final Function(TextEditingController textEditingController)? onControllerSet;
+
+  final Map<String, String> atMembersMap;
 }

@@ -14,7 +14,7 @@ class AtSpecialTextSpanBuilder extends SpecialTextSpanBuilder {
 
   static const regexAt = r'(@\{\d+\}\s)';
 
-  static const regexAtAll = r'@atEveryone ';
+  static const regexAtAll = r'@\{atEveryone\}\s';
 
   final AtTextCallback? atCallback;
 

@@ -131,7 +131,7 @@ class TextMessage extends StatelessWidget {
               },
             )
         else
-          RegExp(AtSpecialTextSpanBuilder.regexAt).hasMatch(message.text)
+          RegExp(AtSpecialTextSpanBuilder.regexAt).hasMatch(message.text) || RegExp(AtSpecialTextSpanBuilder.regexAtAll).hasMatch(message.text)
               ? ExtendedText(
                   message.text,
                   style: bodyTextStyle,

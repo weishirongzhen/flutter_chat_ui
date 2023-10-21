@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:extended_text/extended_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
@@ -129,7 +127,7 @@ class TextMessage extends StatelessWidget {
                 allAtMap: options.atMembersMap,
               ),
               onSpecialTextTap: (text) {
-                log('wtf $text');
+                options.onAtMemberPressed?.call(text);
               },
             )
         else
